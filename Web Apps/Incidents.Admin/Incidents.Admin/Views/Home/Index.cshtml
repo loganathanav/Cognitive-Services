@@ -1,0 +1,151 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+@model IEnumerable<Incident>
+
+@if (Model == null || Model.Count() == 0 || !Model.Any(incident => (incident.Status == (int)IncidentStatus.Initiated || incident.Status == (int)IncidentStatus.Started || incident.Status == (int)IncidentStatus.Processing)))
+{
+    <div class="row plus-button-row">
+        <button type="button" class="btn btn-success btn-circle btn-lg" data-toggle="collapse" data-target="#incidentForm">
+            <span class="glyphicon glyphicon-plus dark-plus"></span>
+        </button>
+    </div>
+}
+
+<div class="row incident-form collapse" id="incidentForm">
+    <div class="row">
+        <div class="col-md-12">
+            &nbsp;
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 zetron-label">
+            <label for="title">Title</label>
+        </div>
+        <div class="col-md-8">
+            <input type="text" name="title" id="title" onkeydown="enableSubmit();" onkeyup="enableSubmit();" onchange="enableSubmit();" class="input-text" required />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 zetron-label">
+            <label for="location">Location</label>
+        </div>
+        <div class="col-md-8">
+            <input type="text" name="location" id="location" onkeydown="enableSubmit();" onkeyup="enableSubmit();" onchange="enableSubmit();" class="input-text" required />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+        </div>
+        <div class="col-md-8">
+            <input type="checkbox" id="immediateStart" /> <label for="immediateStart">Start streaming immediately.</label>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+        </div>
+        <div class="col-md-8 zetron-label">
+            <button type="submit" id="btnSaveIncident" class="btn btn-default" disabled="disabled" onclick="createIncident();">Save</button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            &nbsp;
+        </div>
+    </div>
+
+</div>
+
+
+<div id="liveIncidents">
+    @Html.Partial("_live")
+</div>
+@if (Model != null && Model.Count() > 0 && Model.Any(incident => (incident.Status == (int)IncidentStatus.Stopped)))
+{
+    <div class="row completed-incidents">
+        @foreach (var incident in Model.Where(incident => (incident.Status == (int)IncidentStatus.Stopped)).OrderByDescending(incident => incident.ReportedOn))
+        {
+            <div class="row">
+                <div class="col-md-9">
+                    <h3>@incident.Title</h3>
+                    <span>
+                        @incident.Location
+                    </span>
+                </div>
+                <div class="col-md-3 zetron-label">
+                    <button class="btn btn-default" onclick='deactivateIncident(@Html.Raw(Json.Serialize(incident)));'>Deactivate</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 hr-row">
+                </div>
+            </div>
+        }
+    </div>
+}
+<script src="~/lib/jquery/dist/jquery.js"></script>
+<script type="text/javascript">
+    $(function () {
+        setInterval(function () { $('#liveIncidents').load('/live'); }, 10000);
+    });
+
+    function enableSubmit() {
+        let title = document.getElementById('title').value;
+        let location = document.getElementById('location').value;
+        let button = document.getElementById('btnSaveIncident');
+
+        if (title == '' || location == '') {
+            if (!button.hasAttribute('disabled')) {
+                button.setAttribute('disabled', 'disabled');
+            }
+        } else {
+            if (button.hasAttribute('disabled')) {
+                button.removeAttribute('disabled');
+            }
+        }
+    }
+
+    function hideMe(e) {
+        e.parentElement.style.visibility = "hidden";
+    }
+
+    function createIncident() {
+        let title = document.getElementById('title').value;
+        let location = document.getElementById('location').value;
+        let url = "/create";
+        $.post(url, { Title: title, Location: location, IsImmediateProcessing: document.getElementById('immediateStart').checked }, function (data) {
+            window.location.href = "/Home/Index";
+        });
+    }
+
+    function stopProcessing(incident) {
+        debugger;
+        incident.status = 4;
+        let url = "/update";
+        $.post(url, incident, function (data) {
+            window.location.href = "/Home/Index";
+        });
+    }
+
+    function startStreaming(incident) {
+        incident.status = 3;
+        let url = "/update";
+        $.post(url, incident, function (data) {
+            window.location.href = "/Home/Index";
+        });
+    }
+
+    function deactivateIncident(incident) {
+        incident.status = 5;
+        let url = "/update";
+        $.post(url, incident, function (data) {
+            window.location.href = "/Home/Index";
+        });
+    }
+</script>

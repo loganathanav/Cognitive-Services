@@ -1,0 +1,145 @@
+﻿body {
+    padding-top: 50px;
+    padding-bottom: 20px;
+}
+
+/* Wrapping element */
+/* Set some basic padding to keep content from hitting the edges */
+.body-content {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/*bootstrap override*/
+.navbar-inverse {
+    background-color: #E0ECF7;
+    border-color: #E0ECF7;
+    color: #00529b;
+}
+
+.navbar-inverse .navbar-brand {
+    color: #00529b;
+    text-align: center;
+}
+
+.row {
+    padding: 5px;
+    margin-right: 0px;
+    margin-left: 0px;
+}
+
+/*plus button*/
+.plus-button {
+    background-color: #22ad5a;
+}
+
+.dark-plus {
+    color: #000;
+}
+
+.btn-circle {
+    width: 30px;
+    height: 30px;
+    text-align: center;
+    padding: 6px 0;
+    font-size: 12px;
+    line-height: 1.428571429;
+    border-radius: 15px;
+}
+
+.btn-circle.btn-lg {
+    width: 50px;
+    height: 50px;
+    padding: 10px 16px;
+    font-size: 18px;
+    line-height: 1.33;
+    border-radius: 25px;
+}
+
+.plus-button-row {
+    margin: 2px;
+    text-align: right;
+}
+
+/*incident form*/
+.incident-form {
+    margin: 10px 0 0 0;
+    background-color: #AAFF7F;
+}
+
+.form-row {
+    margin: 5px;
+    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+}
+
+.input-text {
+    border: 0;
+    outline: 0;
+    background: #AAFF7F;
+    border-bottom: 1px solid black;
+    font-family: Arial, Helvetica, sans-serif;
+    width: 70%;
+}
+
+/*live incidents*/
+.live-incidents {
+    margin: 10px 0 0 0;
+    background-color: #ffffd4;
+}
+
+.visible-item {
+    display: block;
+}
+
+.hidden-item {
+    display: none;
+}
+
+/*completed incidents*/
+.completed-incidents {
+    margin: 10px 0 0 0;
+    background-color: #dcdcdc;
+}
+
+/*navigation header*/
+.navbar-brand-logo {
+    text-align: justify;
+    width: 100%;
+    text-transform: uppercase;
+    margin-top: 15px;
+    line-height: 50px;
+    font-weight: 700;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-size: 20px;
+}
+
+/*common styles*/
+.hr-row {
+    line-height: 1px;
+    height: 1px;
+    padding: 0;
+    margin: 0;
+  border:solid 0.5px;
+  color:aliceblue;
+}
+/*Media Queries*/
+@media screen and (min-width: 992px) {
+    .zetron-label {
+        text-align: right;
+    }
+}
+
+@media screen and (max-width: 760px) {
+    .plus-button-row {
+        margin: 50px 0 0 0;
+    }
+
+
+    .live-incidents {
+        margin: 50px 0 0 0;
+    }
+
+    .incident-form {
+        margin: 50px 0 0 0;
+    }
+}
