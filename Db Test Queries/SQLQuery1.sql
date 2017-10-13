@@ -23,14 +23,21 @@
  --INSERT @SmokeLevel VALUES('Gray Smoke',@GraySmoke)
  --select  Name, Max(Level) AS SmokeLevel FROM @SmokeLevel GROUP BY Name Order By Max(Level) Desc
 
--- truncate table [dbo].[ZetronTrnFrameTags]
+-- select * from [dbo].[ZetronMstIncidents] WITH (NOLOCK)
+-- truncate table [dbo].[ZetronMstIncidents]
 
 -- select * from [dbo].[ZetronTrnMediaDetails]
--- select * from [dbo].[ZetronMstIncidents]
-
+-- truncate table dbo.ZetronTrnMediaDetails
 
 -- select * from [dbo].[ZetronTrnFrames]
+-- delete from  dbo.ZetronTrnFrames
 
---Update [dbo].[ZetronMstIncidents]
---SET Status=4
+-- select * from [dbo].[ZetronTrnFrameTags] WITH(NOLOCK)
+-- truncate table [dbo].[ZetronTrnFrameTags]
+
+-- 2.50540422E-10
+-- select * from [dbo].[ZetronTrnFrameTags] WITH(NOLOCK) WHERE ConfidenceLevel=0
+-- 426
+
+-- Update [dbo].[ZetronMstIncidents] SET Status=4
 
