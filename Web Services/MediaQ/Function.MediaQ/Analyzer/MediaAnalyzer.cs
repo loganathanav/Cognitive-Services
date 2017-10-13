@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Newtonsoft.Json;
 
 namespace Function.MediaQ.Analyzer
 {
@@ -127,7 +128,7 @@ namespace Function.MediaQ.Analyzer
             }
         }
 
-        public async Task ProcessMedia()
+        public async void ProcessMedia()
         {
             _grabber.AnalysisFunction = TaggingAnalysisFunction;
             _grabber.TriggerAnalysisOnInterval(_analysisInterval);
@@ -147,6 +148,7 @@ namespace Function.MediaQ.Analyzer
                 var analysis = await _visionClient.PostAsync(_customVisionUrl, content);
 
                 predictions = analysis.Content.ReadAsAsync<PredictionTimes>().Result;
+                _log.Info(JObject.FromObject(predictions).ToString());
             }
             return new FrameAnalysisResult() { Tags = predictions };
         }

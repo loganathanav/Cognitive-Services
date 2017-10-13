@@ -26,10 +26,10 @@
 -- select * from [dbo].[ZetronMstIncidents] WITH (NOLOCK)
 -- truncate table [dbo].[ZetronMstIncidents]
 
--- select * from [dbo].[ZetronTrnMediaDetails]
+-- select * from [dbo].[ZetronTrnMediaDetails] WITH(NOLOCK) WHERE IncidentId=16
 -- truncate table dbo.ZetronTrnMediaDetails
 
--- select * from [dbo].[ZetronTrnFrames]
+-- select * from [dbo].[ZetronTrnFrames] with(nolock)
 -- delete from  dbo.ZetronTrnFrames
 
 -- select * from [dbo].[ZetronTrnFrameTags] WITH(NOLOCK)

@@ -12,7 +12,7 @@ namespace Function.MediaQ
     public static class MediaQueue
     {
         [FunctionName("MediaQueue")]
-        public static async void Run([QueueTrigger("zetron-media", Connection = "AzureWebJobsStorage")]string myQueueItem, TraceWriter log)
+        public static void Run([QueueTrigger("zetron-media", Connection = "AzureWebJobsStorage")]string myQueueItem, TraceWriter log)
         {
             var mediaJson = JObject.Parse(myQueueItem);
             var client = new HttpClient();
@@ -24,7 +24,7 @@ namespace Function.MediaQ
             var dbcontext = new ZetronDbContext(connectionString, log);
             var grapper = new FrameGrabber<FrameAnalysisResult>(mediaJson, dbcontext, log);
             var mediaAnalyzer = new MediaAnalyzer(mediaJson, client, grapper, dbcontext, log, analysisInterval, url);
-            await mediaAnalyzer.ProcessMedia();
+            mediaAnalyzer.ProcessMedia();
 
             log.Info($"MediaQueue trigger function started for media id: {mediaJson["mediaId"]}");
         }
