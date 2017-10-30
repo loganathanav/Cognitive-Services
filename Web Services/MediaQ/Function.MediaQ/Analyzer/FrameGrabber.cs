@@ -401,6 +401,8 @@ namespace Function.MediaQ.Analyzer
         {
             try
             {
+                _log.Info($"Streaming Url: {strStreamingUrl}");
+                IncidentStatus status = IncidentStatus.Initiated;
                 using (var vc = new VideoCapture(strStreamingUrl))
                 {
                     if (vc.IsOpened())
@@ -410,20 +412,20 @@ namespace Function.MediaQ.Analyzer
                     }
                     else
                     {
-                        _log.Info($"Checking streaming status...");
-                        var status = _dbContext.CheckEventState((int)_mediaObject["mediaId"]);
-                        if (status == IncidentStatus.Processing)
-                        {
-                            _log.Info($"Streaming in-progress...");
-                            Thread.Sleep(3000);
-                            CheckStreamingStatus();
-                        }
-                        if (status == IncidentStatus.Stopped || status == IncidentStatus.Deactivated)
-                        {
-                            _log.Info($"Streaming stopped...");
-                            return false;
-                        }
+                        _log.Info($"Video not open. Checking db for streaming status...");
+                        status = _dbContext.CheckEventState((int)_mediaObject["mediaId"]);
                     }
+                }
+                if (status == IncidentStatus.Processing)
+                {
+                    _log.Info($"Streaming in-progress...");
+                    Thread.Sleep(3000);
+                    return CheckStreamingStatus();
+                }
+                else if (status == IncidentStatus.Stopped || status == IncidentStatus.Deactivated)
+                {
+                    _log.Info($"Streaming stopped...");
+                    return false;
                 }
             }
             catch (Exception e)

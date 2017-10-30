@@ -16,7 +16,7 @@ namespace Function.MediaQ.Model
             _connectionString = connectionString;
             _log = log;
         }
-        public int AddTags(IEnumerable<FrameTag> tags)
+        public int AddTags(List<FrameTag> tags)
         {
             _log.Info($"Add Tag method entry");
             try

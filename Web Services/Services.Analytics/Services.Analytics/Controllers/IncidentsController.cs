@@ -43,15 +43,42 @@ namespace Services.Analytics.Controllers
                     var medias = zetronMstIncidents[i].ZetronTrnMediaDetails.ToList();
                     for (int mediaIndex = 0; mediaIndex < medias.Count; mediaIndex++)
                     {
-                        var tags = _context.ZetronTrnFrameTags.Where(tag => tag.MediaId == medias[mediaIndex].MediaId).ToList();
-                        if (tags != null && tags.Count > 0)
+                        var frames = _context.ZetronTrnFrames.Where(tag => tag.MediaId == medias[mediaIndex].MediaId).ToList();
+                        if (frames != null && frames.Count > 0)
                         {
-                            medias[mediaIndex].ZetronTrnFrameTags = (ICollection<ZetronTrnFrameTags>)tags;
+                            medias[mediaIndex].ZetronTrnFrames = (ICollection<ZetronTrnFrames>)frames;
+                            for (int frameIndex = 0; frameIndex < frames.Count; frameIndex++)
+                            {
+                                var tags = _context.ZetronTrnFrameTags.Where(t => t.FrameId == frames[frameIndex].FrameId).ToList();
+                                if (tags != null && tags.Count > 0)
+                                {
+                                    frames[frameIndex].ZetronTrnFrameTags = (ICollection<ZetronTrnFrameTags>)tags;
+                                }
+                            }
+
                         }
                     }
                 }
             }
             return zetronMstIncidents;
+        }
+
+        [HttpGet("Active")]
+        public async Task<ZetronMstIncidents> GetZetronActiveIncident()
+        {
+            var zetronMstActiveIncident = _context.ZetronMstIncidents.Where(f => f.Status <= (int)IncidentStatus.Stopped).OrderBy(o => o.Status).ThenByDescending(t => t.IncidentId).FirstOrDefault();
+            if (zetronMstActiveIncident != null)
+            {
+                if (zetronMstActiveIncident.ZetronTrnMediaDetails.Count == 0)
+                {
+                    var zetronMedias = await _context.ZetronTrnMediaDetails.SingleOrDefaultAsync(m => m.IncidentId == zetronMstActiveIncident.IncidentId);
+                    if (zetronMedias != null)
+                    {
+                        zetronMstActiveIncident.ZetronTrnMediaDetails.Add(zetronMedias);
+                    }
+                }
+            }
+            return zetronMstActiveIncident;
         }
 
         // GET: api/Incidents/5
@@ -83,10 +110,18 @@ namespace Services.Analytics.Controllers
                 var medias = zetronMstIncidents.ZetronTrnMediaDetails.ToList();
                 for (int i = 0; i < medias.Count; i++)
                 {
-                    var tags = _context.ZetronTrnFrameTags.Where(t => t.MediaId == medias[i].MediaId).ToList();
-                    if (tags != null && tags.Count > 0)
+                    var frames = _context.ZetronTrnFrames.Where(t => t.MediaId == medias[i].MediaId).ToList();
+                    if (frames != null && frames.Count > 0)
                     {
-                        medias[i].ZetronTrnFrameTags = (ICollection<ZetronTrnFrameTags>)tags;
+                        medias[i].ZetronTrnFrames = (ICollection<ZetronTrnFrames>)frames;
+                        for (int frameIndex = 0; frameIndex < frames.Count; frameIndex++)
+                        {
+                            var tags = _context.ZetronTrnFrameTags.Where(t => t.FrameId == frames[frameIndex].FrameId).ToList();
+                            if (tags != null && tags.Count > 0)
+                            {
+                                frames[frameIndex].ZetronTrnFrameTags = (ICollection<ZetronTrnFrameTags>)tags;
+                            }
+                        }
                     }
                 }
             }
@@ -111,23 +146,27 @@ namespace Services.Analytics.Controllers
             try
             {
                 var recordtoUpdate = _context.ZetronMstIncidents.Single(i => i.IncidentId == id);
-                recordtoUpdate.Status = zetronMstIncidents.Status;
-                await _context.SaveChangesAsync();
-
-                switch (zetronMstIncidents.Status)
+                if (recordtoUpdate.Status != zetronMstIncidents.Status)
                 {
-                    case (int)IncidentStatus.Processing:
-                        //trigger job
-                        _mediaContext.TriggerJob(zetronMstIncidents.Title);
-                        break;
-                    case (int)IncidentStatus.Stopped:
-                        _mediaContext.StopAzureProcess();
-                        break;
-                    case (int)IncidentStatus.Deactivated:
-                        _mediaContext.StopAzureProcess();
-                        break;
-                    default:
-                        break;
+                    recordtoUpdate.Status = zetronMstIncidents.Status;
+                    Task incidentUpdate = _context.SaveChangesAsync();
+
+                    switch (zetronMstIncidents.Status)
+                    {
+                        case (int)IncidentStatus.Processing:
+                            //trigger job
+                            incidentUpdate.Wait();
+                            _mediaContext.TriggerJob(id);
+                            break;
+                        case (int)IncidentStatus.Stopped:
+                            _mediaContext.StopAzureProcess(id, IncidentStatus.Stopped);
+                            break;
+                        case (int)IncidentStatus.Deactivated:
+                            _mediaContext.StopAzureProcess(id, IncidentStatus.Deactivated);
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
             catch (DbUpdateConcurrencyException)
@@ -153,7 +192,7 @@ namespace Services.Analytics.Controllers
             {
                 return BadRequest(ModelState);
             }
-            
+
             _context.ZetronMstIncidents.Add(zetronMstIncidents);
             await _context.SaveChangesAsync();
 
@@ -183,10 +222,10 @@ namespace Services.Analytics.Controllers
             {
                 for (int mediaIndex = 0; mediaIndex < zetronMedias.Count; mediaIndex++)
                 {
-                    var zetronTags = _context.ZetronTrnFrameTags.Where(m => m.MediaId == zetronMedias[mediaIndex].MediaId);
-                    if (zetronTags != null)
+                    var zetronFrames = _context.ZetronTrnFrames.Where(m => m.MediaId == zetronMedias[mediaIndex].MediaId);
+                    if (zetronFrames != null)
                     {
-                        _context.ZetronTrnFrameTags.RemoveRange(zetronTags);
+                        _context.ZetronTrnFrames.RemoveRange(zetronFrames);
                     }
                 }
                 _context.ZetronTrnMediaDetails.RemoveRange(zetronMedias);

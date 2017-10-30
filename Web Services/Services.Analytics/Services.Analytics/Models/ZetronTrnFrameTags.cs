@@ -5,12 +5,11 @@ namespace Services.Analytics.Models
 {
     public partial class ZetronTrnFrameTags
     {
+        public int TagId { get; set; }
         public int FrameId { get; set; }
-        public int MediaId { get; set; }
-        public DateTime FrameTime { get; set; }
         public string Tag { get; set; }
-        public int ConfidenceLevel { get; set; }
+        public decimal ConfidenceLevel { get; set; }
 
-        public ZetronTrnMediaDetails Media { get; set; }
+        public ZetronTrnFrames Frame { get; set; }
     }
 }

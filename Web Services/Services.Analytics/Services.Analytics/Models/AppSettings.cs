@@ -9,5 +9,6 @@ namespace Services.Analytics.Models
     {
         public string MediaServicesAccountName { get; set; }
         public string MediaServicesAccountKey { get; set; }
+        public string StorageAccountConnection { get; set; }
     }
 }

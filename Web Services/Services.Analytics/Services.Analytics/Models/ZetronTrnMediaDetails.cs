@@ -8,12 +8,15 @@ namespace Services.Analytics.Models
     {
         public ZetronTrnMediaDetails()
         {
-            ZetronTrnFrameTags = new HashSet<ZetronTrnFrameTags>();
+            ZetronTrnFrames = new HashSet<ZetronTrnFrames>();
+            ZetronTrnDroneLocations = new HashSet<ZetronTrnDroneLocations>();
         }
 
         public int MediaId { get; set; }
         public int IncidentId { get; set; }
         public string MediaUrl { get; set; }
+        public string MediaSummaryUrl { get; set; }
+        public string Name { get; set; }
         public int MediaType { get; set; }
         public DateTime PostedIon { get; set; }
         public string PostedBy { get; set; }
@@ -21,7 +24,10 @@ namespace Services.Analytics.Models
 
         public ZetronMstIncidents Incident { get; set; }
 
-        [JsonProperty(PropertyName = "tags")]
-        public ICollection<ZetronTrnFrameTags> ZetronTrnFrameTags { get; set; }
+        [JsonProperty(PropertyName = "frames")]
+        public ICollection<ZetronTrnFrames> ZetronTrnFrames { get; set; }
+
+        [JsonProperty(PropertyName = "location")]
+        public ICollection<ZetronTrnDroneLocations> ZetronTrnDroneLocations { get; set; }
     }
 }

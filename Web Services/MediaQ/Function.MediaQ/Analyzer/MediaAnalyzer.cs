@@ -17,6 +17,7 @@ namespace Function.MediaQ.Analyzer
     {
         private readonly HttpClient _visionClient = null;
         private readonly string _customVisionUrl = null;
+        private readonly int _analysisEntryCount;
         private readonly JObject _mediaObject;
         private readonly FrameGrabber<FrameAnalysisResult> _grabber = null;
         private readonly ZetronDbContext _dbContext;
@@ -29,11 +30,12 @@ namespace Function.MediaQ.Analyzer
 
         private List<FrameTag> Tags = new List<FrameTag>();
         private int PushCount = 0;
-        private int MediaId;
+        private readonly int MediaId;
 
         public MediaAnalyzer(JObject mediaObject, HttpClient visionClient,
-            FrameGrabber<FrameAnalysisResult> grapper, ZetronDbContext dbContext, TraceWriter log, TimeSpan analysisInterval, string customVisionUrl)
+            FrameGrabber<FrameAnalysisResult> grapper, ZetronDbContext dbContext, TraceWriter log, TimeSpan analysisInterval, int analysisEntryCount, string customVisionUrl, int mediaId)
         {
+            log.Info("Media analyzer initialize");
             _mediaObject = mediaObject;
             _visionClient = visionClient;
             _grabber = grapper;
@@ -41,8 +43,8 @@ namespace Function.MediaQ.Analyzer
             _log = log;
             _analysisInterval = analysisInterval;
             _customVisionUrl = customVisionUrl;
-
-            MediaId = (int)_mediaObject["mediaId"];
+            _analysisEntryCount = analysisEntryCount;
+            MediaId = mediaId;
 
             _grabber.NewResultAvailable += (s, e) =>
             {
@@ -93,7 +95,7 @@ namespace Function.MediaQ.Analyzer
                     {
                     }
 
-                    if (PushCount >= 5 && Tags.Count > 0)
+                    if (PushCount >= _analysisEntryCount && Tags.Count > 0)
                     {
                         AddTagsAndCheckEventStatus();
                     }
@@ -126,10 +128,12 @@ namespace Function.MediaQ.Analyzer
                 _log.Info($"Completing media analysis because incident status changed to {incidentStatus}.");
                 await _grabber.StopProcessingAsync();
             }
+
         }
 
         public async void ProcessMedia()
         {
+            _log.Info("Process media started");
             _grabber.AnalysisFunction = TaggingAnalysisFunction;
             _grabber.TriggerAnalysisOnInterval(_analysisInterval);
 
@@ -139,16 +143,26 @@ namespace Function.MediaQ.Analyzer
 
         private async Task<FrameAnalysisResult> TaggingAnalysisFunction(VideoFrame frame)
         {
-            PredictionTimes predictions;
-            var jpg = frame.Image.ToMemoryStream(".jpg", s_jpegParams);
-
-            using (var content = new ByteArrayContent(jpg.ToArray()))
+            PredictionTimes predictions = null;
+            try
             {
-                content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-                var analysis = await _visionClient.PostAsync(_customVisionUrl, content);
+                var jpg = frame.Image.ToMemoryStream(".jpg", s_jpegParams);
 
-                predictions = analysis.Content.ReadAsAsync<PredictionTimes>().Result;
-                _log.Info(JObject.FromObject(predictions).ToString());
+                using (var content = new ByteArrayContent(jpg.ToArray()))
+                {
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+
+                    var analysis = await _visionClient.PostAsync(_customVisionUrl, content);
+                    _log.Info($"Raw Result: {analysis.Content.ReadAsStringAsync().Result}");
+                    //_log.Info(_customVisionUrl);
+                    predictions = analysis.Content.ReadAsAsync<PredictionTimes>().Result;
+                    _log.Info($"Predictions: {JObject.FromObject(predictions).ToString()}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex.Message);
+                throw;
             }
             return new FrameAnalysisResult() { Tags = predictions };
         }

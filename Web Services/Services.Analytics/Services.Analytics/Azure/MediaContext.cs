@@ -8,30 +8,48 @@ using System.Threading;
 using Microsoft.WindowsAzure.MediaServices.Client.DynamicEncryption;
 using Services.Analytics.Models;
 using System.Net.Http;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Queue;
+using Newtonsoft.Json.Linq;
+using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
+using Services.Analytics.Interfaces;
 
 namespace Services.Analytics
 {
     public class MediaContext
     {
-        private readonly ZetronContext _dbContext;
+        //private readonly ZetronContext _dbContext;
         private readonly AppSettings _appSettings;
 
         private readonly CloudMediaContext _mediaContext;
         private readonly MediaServicesCredentials _cachedCredentials;
         private readonly IChannel _channel;
+        private readonly CloudStorageAccount _storageAccount;
+        private readonly CloudQueueClient _queueClient;
 
+        private IConfiguration _configuration { get; }
+        private DbContextOptionsBuilder<ZetronContext> options;
+        //private readonly IDrone _drone;
 
-        public MediaContext(ZetronContext context, IOptions<AppSettings> appSettings)
+        public MediaContext(IOptions<AppSettings> appSettings, IConfiguration configuration)//, IDrone drone)
         {
             _appSettings = appSettings.Value;
-            _dbContext = context;
+            _configuration = configuration;
+            //_drone = drone;
+
+            options = new DbContextOptionsBuilder<ZetronContext>();
+            options.UseSqlServer(_configuration["ZetronDb"]);
 
             try
             {
-                _cachedCredentials = new MediaServicesCredentials(_appSettings.MediaServicesAccountName, _appSettings.MediaServicesAccountKey);
-                // Used the cached credentials to create CloudMediaContext.
-                _mediaContext = new CloudMediaContext(_cachedCredentials);
+                var tokenCredentials = new AzureAdTokenCredentials("ilink-systems.com", new AzureAdClientSymmetricKey("44e26513-dcb2-4c96-b841-21b6a262ec87", "YcFIlPERjGt4yGi8/ntOo8mEgqqPLkH7keWNk82/Iss="), AzureEnvironments.AzureCloudEnvironment);
+                var tokenProvider = new AzureAdTokenProvider(tokenCredentials);
+                _mediaContext = new CloudMediaContext(new Uri(@"https://zetronpoc.restv2.westcentralus-2.media.azure.net/api/"), tokenProvider);
+
                 _channel = _mediaContext.Channels.FirstOrDefault();
+                _storageAccount = CloudStorageAccount.Parse(_appSettings.StorageAccountConnection);
+                _queueClient = _storageAccount.CreateCloudQueueClient();
             }
             catch (Exception Ex)
             {
@@ -46,7 +64,6 @@ namespace Services.Analytics
             {
                 await Task.Run(() =>
                 {
-                    //Get first channel
                     StartChannel();
 
                     if (_channel != null)
@@ -69,20 +86,46 @@ namespace Services.Analytics
             }
         }
 
-        public async void StopAzureProcess()
+        public void StopAzureProcess(int incidentId, IncidentStatus incidentStatus)
         {
             try
             {
-                await Task.Yield();
-                var livePrograms = _channel.Programs.ToList();
-                List<Task> tasks = new List<Task>();                
-                foreach (var program in livePrograms)
+                using (var _dbContext = new ZetronContext(options.Options))
                 {
-                    if (program.State == ProgramState.Running)
-                        tasks.Add(program.StopAsync());
-                }                
-                Task.WaitAll(tasks.ToArray());                                
-                livePrograms.ForEach(p => p.DeleteAsync());
+                    //Trigger Media Summary Q
+                    if (incidentStatus == IncidentStatus.Stopped)
+                    {
+                        var media = _dbContext.ZetronTrnMediaDetails.FirstOrDefault(i => i.IncidentId == incidentId);
+                        if (media != null)
+                        {
+                            var queue = _queueClient.GetQueueReference("zetron-media-summary");
+                            queue.CreateIfNotExistsAsync();
+                            var queueMessage = new JObject
+                            {
+                                ["mediaId"] = media.MediaId,
+                                ["mediaUrl"] = media.MediaUrl,
+                                ["mediaName"] = media.Name
+                            };
+
+                            var message = new CloudQueueMessage(queueMessage.ToString());
+                            queue.AddMessageAsync(message);
+                        }
+                        else
+                        {
+                            Log("MediaContext - StopAzureProcess - No matching media details found!");
+                        }
+                    }
+
+                    var livePrograms = _channel.Programs.ToList();
+                    List<Task> tasks = new List<Task>();
+                    foreach (var program in livePrograms)
+                    {
+                        if (program.State == ProgramState.Running)
+                            tasks.Add(program.StopAsync());
+                    }
+                    Task.WaitAll(tasks.ToArray());
+                    livePrograms.ForEach(p => p.DeleteAsync());
+                }
             }
             catch (Exception ex)
             {
@@ -146,7 +189,7 @@ namespace Services.Analytics
                 Log(ex.Message);
                 throw;
             }
-            
+
             return asset;
         }
 
@@ -164,12 +207,13 @@ namespace Services.Analytics
                 if (_channel.State == ChannelState.Running)
                 {
                     //Start the program
-                    await program.StartAsync();
-                    UpdateStreamingUrl(asset, originLocator, zetronMstIncidents);
+                    Task prog = program.StartAsync();
+                    Task stream = UpdateStreamingUrl(asset, originLocator, zetronMstIncidents);
 
-                    if (zetronMstIncidents.Status == (int)IncidentStatus.Started)
+                    Task.WaitAll(prog, stream);
+                    if ((zetronMstIncidents.Status == (int)IncidentStatus.Started) || (zetronMstIncidents.Status == (int)IncidentStatus.Processing))
                     {
-                        TriggerJob(zetronMstIncidents.Title);
+                        TriggerJob(zetronMstIncidents.IncidentId);
                     }
                 }
             }
@@ -180,34 +224,64 @@ namespace Services.Analytics
             }
         }
 
-        private async void UpdateStreamingUrl(IAsset asset, ILocator originLocator, ZetronMstIncidents zetronMstIncidents)
+        public void DeleteAllAssets()
+        {
+            try
+            {
+                _mediaContext.Assets.ToList().ForEach(p => p.DeleteAsync());
+            }
+            catch (Exception ex)
+            {
+                Log(ex.Message);
+                throw;
+            }
+        }
+
+        private async Task UpdateStreamingUrl(IAsset asset, ILocator originLocator, ZetronMstIncidents zetronMstIncidents)
         {
             try
             {
                 //Get manifest file to create streaming url
                 IAssetFile manifestFile = asset.AssetFiles.Where(f => f.Name.ToLower().EndsWith(".ism")).FirstOrDefault();
                 string streamUrl = originLocator.Path + manifestFile.Name + "/manifest(format=m3u8-aapl)";
-
+                //var droneDetail = _drone.GetCurrentLocationDetail();
                 ZetronTrnMediaDetails mediaDetails = new ZetronTrnMediaDetails()
                 {
                     IncidentId = zetronMstIncidents.IncidentId,
                     MediaUrl = streamUrl,
+                    Name = asset.Name,
                     MediaType = 1,
                     PostedIon = DateTime.Now.ToUniversalTime(),
                     PostedBy = "Admin",
                     Status = true
                 };
-
-                _dbContext.ZetronTrnMediaDetails.Add(mediaDetails);
-
-                ZetronMstIncidents recordtoUpdate = null;
-                if (zetronMstIncidents.Status == (int)IncidentStatus.Started)
+                using (var _dbContext = new ZetronContext(options.Options))
                 {
-                    recordtoUpdate = _dbContext.ZetronMstIncidents.Single(i => i.IncidentId == zetronMstIncidents.IncidentId);
-                    recordtoUpdate.Status = (int)IncidentStatus.Processing;
-                }
+                    //var mediaId = _dbContext.ZetronTrnMediaDetails.Max(m => m.MediaId) + 1;
+                    _dbContext.ZetronTrnMediaDetails.Add(mediaDetails);
 
-                await _dbContext.SaveChangesAsync();
+                    ZetronMstIncidents recordtoUpdate = null;
+                    if (zetronMstIncidents.Status == (int)IncidentStatus.Started)
+                    {
+                        recordtoUpdate = _dbContext.ZetronMstIncidents.Single(i => i.IncidentId == zetronMstIncidents.IncidentId);
+                        recordtoUpdate.Status = (int)IncidentStatus.Processing;
+                    }
+
+                    //_dbContext.ZetronTrnDroneLocations.Add(new ZetronTrnDroneLocations()
+                    //{
+                    //    MediaID = mediaId,
+                    //    DewPoint = droneDetail.DewPoint,
+                    //    Humidity = droneDetail.Humidity,
+                    //    Temperature = droneDetail.Temperature,
+                    //    WindSpeed = droneDetail.WindSpeed,
+                    //    Summary = droneDetail.Summary,
+                    //    WindDirection = droneDetail.WindDirection,
+                    //    Longitude = droneDetail.Longitude,
+                    //    Latitude = droneDetail.Latitude
+                    //});
+
+                    await _dbContext.SaveChangesAsync();
+                }
             }
             catch (Exception ex)
             {
@@ -226,18 +300,51 @@ namespace Services.Analytics
                 operationId ?? string.Empty);
         }
 
-        public async void TriggerJob(string name)
+        public void TriggerJob(int incidentId = 0)
         {
-            await Task.Yield();
+            //await Task.Yield();
             try
             {
-                using (HttpClientHandler httpClientHandler = new HttpClientHandler())
+                using (var _dbContext = new ZetronContext(options.Options))
                 {
-                    httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => { return true; };
-                    using (var client = new HttpClient(httpClientHandler))
+                    var media = _dbContext.ZetronTrnMediaDetails.FirstOrDefault(i => i.IncidentId == incidentId);
+                    if (media != null)
                     {
-                        var response = client.GetAsync($"https://zetronjob.azurewebsites.net/api/zetronjobhttptrigger?name=" + name).Result;
-                        var result = response.Content.ReadAsStringAsync().Result;
+                        //_storageAccount = CloudStorageAccount.Parse(_appSettings.StorageAccountConnection);
+                        //_queueClient = _storageAccount.CreateCloudQueueClient();
+
+                        //Remove tags
+                        var frames = _dbContext.ZetronTrnFrames.Where(f => f.MediaId == media.MediaId);
+                        if (frames != null && frames.Count() > 0)
+                        {
+                            foreach (var frame in frames)
+                            {
+                                var tags = _dbContext.ZetronTrnFrameTags.Where(t => t.FrameId == frame.FrameId);
+                                if (tags != null && tags.Count() > 0)
+                                {
+                                    _dbContext.ZetronTrnFrameTags.RemoveRange(tags);
+                                }
+                            }
+                            _dbContext.ZetronTrnFrames.RemoveRange(frames);
+                            Log($"MediaContext - TriggerJob - Media id {media.MediaId} related tags removed!");
+                            _dbContext.SaveChanges();
+                        }
+
+                        var queue = _queueClient.GetQueueReference("zetron-media");
+                        queue.CreateIfNotExistsAsync();
+                        var queueMessage = new JObject
+                        {
+                            ["incidentId"] = incidentId,
+                            ["mediaId"] = media.MediaId,
+                            ["mediaUrl"] = media.MediaUrl
+                        };
+
+                        var message = new CloudQueueMessage(queueMessage.ToString());
+                        queue.AddMessageAsync(message);
+                    }
+                    else
+                    {
+                        Log("MediaContext - TriggerJob - No matching media details found!");
                     }
                 }
             }

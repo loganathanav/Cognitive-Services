@@ -1,0 +1,63 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+@model IEnumerable<Incident>
+
+
+@if (Model != null && Model.Count() > 0)
+{
+    <div class="row live-incidents">
+        @foreach (var incident in Model.OrderByDescending(incident => incident.ReportedOn))
+        {
+            <div class="row">
+                <div class="col-md-9">
+                    <h3>@incident.Title</h3>
+                    <span>
+                        @incident.Location
+                    </span>
+                </div>
+                <div class="col-md-3 zetron-label">
+                    @*<button class="btn btn-default" onclick='deactivateIncident(@Html.Raw(Json.Serialize(incident)));'>Deactivate</button>*@
+
+                    <label class="switch">
+                        <input type="checkbox" onclick='TriggerOrStopAnalyzing( this, @Html.Raw(Json.Serialize(incident)) );' id="chkToggle" checked="@Convert.ToBoolean(incident.Status==(int)IncidentStatus.Processing)">
+                        <span class="slider round"></span>
+                    </label>
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 hr-row">
+                </div>
+            </div>
+        }
+    </div>
+}
+<script src="~/lib/jquery/dist/jquery.js"></script>
+<script type="text/javascript">
+    function TriggerOrStopAnalyzing(cb, incident) {
+        if (cb.checked) {
+            startTrigger(incident);
+        } else {
+            stopTrigger(incident);
+        }
+    }
+
+    function stopTrigger(incident) {
+        incident.status = 4;
+        let url = "/trigger";
+        $.post(url, incident, function (data) {
+            window.location.href = "/home/list";
+        });
+    }
+
+    function startTrigger(incident) {
+        incident.status = 3;
+        let url = "/trigger";
+        $.post(url, incident, function (data) {
+            window.location.href = "/home/list";
+        });
+    }
+
+</script>

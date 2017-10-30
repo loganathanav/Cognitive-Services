@@ -27,15 +27,28 @@ namespace Services.Analytics.Controllers
             var zetronMedias = _context.ZetronTrnMediaDetails.ToList();
             for (int mediaIndex = 0; mediaIndex < zetronMedias.Count(); mediaIndex++)
             {
-                var tags = _context.ZetronTrnFrameTags.Where(tag => tag.MediaId == zetronMedias[mediaIndex].MediaId).ToList();
-                if (tags != null && tags.Count > 0)
+                var frames = _context.ZetronTrnFrames.Where(frame => frame.MediaId == zetronMedias[mediaIndex].MediaId).ToList();
+                if (frames != null && frames.Count > 0)
                 {
-                    zetronMedias[mediaIndex].ZetronTrnFrameTags = (ICollection<ZetronTrnFrameTags>)tags;
+                    zetronMedias[mediaIndex].ZetronTrnFrames = (ICollection<ZetronTrnFrames>)frames;
+                    for (int frameIndex = 0; frameIndex < frames.Count; frameIndex++)
+                    {
+                        var tags = _context.ZetronTrnFrameTags.Where(t => t.FrameId == frames[frameIndex].FrameId).ToList();
+                        if (tags != null && tags.Count > 0)
+                        {
+                            frames[frameIndex].ZetronTrnFrameTags = (ICollection<ZetronTrnFrameTags>)tags;
+                        }
+                    }
                 }
-
             }
-
             return zetronMedias;
+        }
+
+        [HttpGet("Analytics/{id}")]
+        public async Task<ActionResult> GetZetronAnalytics([FromRoute] int id)
+        {
+            var result = _context.TagSummary.FromSql("EXEC GetTagCountByMediaId {0}", id).ToList();            
+            return Ok(result);
         }
 
         // GET: api/Medias/5
@@ -54,10 +67,19 @@ namespace Services.Analytics.Controllers
                 return NotFound();
             }
 
-            var tags = _context.ZetronTrnFrameTags.Where(tag => tag.MediaId == zetronTrnMediaDetails.MediaId).ToList();
-            if (tags != null && tags.Count > 0)
+            var frames = _context.ZetronTrnFrames.Where(frame => frame.MediaId == zetronTrnMediaDetails.MediaId).ToList();
+            if (frames != null && frames.Count > 0)
             {
-                zetronTrnMediaDetails.ZetronTrnFrameTags = (ICollection<ZetronTrnFrameTags>)tags;
+                zetronTrnMediaDetails.ZetronTrnFrames = (ICollection<ZetronTrnFrames>)frames;
+
+                for (int i = 0; i < frames.Count; i++)
+                {
+                    var tags = _context.ZetronTrnFrameTags.Where(t => t.FrameId == frames[i].FrameId).ToList();
+                    if (tags != null && tags.Count > 0)
+                    {
+                        frames[i].ZetronTrnFrameTags = (ICollection<ZetronTrnFrameTags>)tags;
+                    }
+                }
             }
 
             return Ok(zetronTrnMediaDetails);
@@ -128,10 +150,10 @@ namespace Services.Analytics.Controllers
                 return NotFound();
             }
 
-            var zetronTags = _context.ZetronTrnFrameTags.Where(m => m.MediaId == id);
-            if (zetronTags != null)
+            var zetronFrames = _context.ZetronTrnFrames.Where(m => m.MediaId == id);
+            if (zetronFrames != null)
             {
-                _context.ZetronTrnFrameTags.RemoveRange(zetronTags);
+                _context.ZetronTrnFrames.RemoveRange(zetronFrames);
             }
 
             _context.ZetronTrnMediaDetails.Remove(zetronMedias);

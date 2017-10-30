@@ -1,0 +1,78 @@
+﻿
+@{
+    ViewData["Title"] = "Index";
+}
+
+@model ZetronMstIncidents
+
+@if (Model != null)
+{
+    <div class="address">
+        <h5>@Model.Title</h5>
+        <h6>@Model.Location</h6>
+    </div>
+}
+<div class="row equal" style="border: 1px solid white">
+    <div class="col-xs-12 col-sm-12 col-md-7 column">
+        <div class="cell">
+            <video id="azuremediaplayer" class="azuremediaplayer amp-default-skin amp-big-play-centered col-xs-12" poster="" tabindex="0">                
+                <p class="amp-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video</p>
+            </video>
+        </div>
+
+        <div class="col-xs-12 cell live-event">
+            <div id="liveIncidents">
+                @Html.Partial("_live", Model.liveData)
+            </div>
+            
+        </div>
+    </div>
+    <div class="col-xs-12 col-sm-12 col-md-5 column">
+        <div class="cell">
+            <div id='myMap'></div>
+        </div>
+    </div>
+</div>
+    
+<script type='text/javascript'>
+    $(function () {
+        var url = '/live/' + @Model?.ZetronTrnMediaDetails?.FirstOrDefault()?.MediaId;
+        setInterval(function () { $('#liveIncidents').load(url); }, 6000);
+    });
+
+    function loadMapScenario() {
+        var map;
+        var map = new Microsoft.Maps.Map(document.getElementById('myMap'), {
+            credentials: 'AjMm_qh2bOojFX8EiU6F1maRRW6Wbj8EavZkCKIetRr6sKjclweErvo8MgZdg_uk',
+            center: new Microsoft.Maps.Location(37.624080, -99.458618),
+            zoom: 5
+        });
+    }
+
+    var myOptions = {
+        "nativeControlsForTouch": false,
+        controls: true,
+        autoplay: true,
+        height: "300",
+    };
+
+    var myPlayer = amp("azuremediaplayer", myOptions);
+
+    var mediaSource = "@Html.Raw(Model?.ZetronTrnMediaDetails?.FirstOrDefault()?.MediaUrl)";
+    var mediaType = "application/vnd.ms-sstr+xml";
+
+    if ((mediaSource.trim().toLowerCase().match('.ism/manifest')) || (mediaSource.trim().toLowerCase().match('.isml/manifest'))) {
+    } else if (mediaSource.toLowerCase().match('.mp4')) {
+        mediaType = "video/mp4";
+    }
+
+    myPlayer.src([
+        {
+            "src": mediaSource,
+            "type": mediaType
+        }
+    ]);
+
+</script>
+
+<script type='text/javascript' src='http://www.bing.com/api/maps/mapcontrol?callback=loadMapScenario' async defer></script>

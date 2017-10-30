@@ -22,13 +22,4 @@ Global
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {034964EF-7C27-41E6-9B08-FF640D3759D1}
 	EndGlobalSection
-	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 2
-		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = https://azuremediaanalyticspoc.visualstudio.com/
-		SccLocalPath0 = .
-		SccProjectUniqueName1 = Services.Analytics\\Services.Analytics.csproj
-		SccProjectName1 = Services.Analytics
-		SccLocalPath1 = Services.Analytics
-	EndGlobalSection
 EndGlobal

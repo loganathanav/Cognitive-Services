@@ -1,0 +1,199 @@
+﻿@model Live
+
+@if (Model != null)
+{
+    <div class="col-xs-5 smoke-fire">
+        <div class="col-xs-12">
+            <div class="col-xs-4  insight-label">
+                <h4>
+                    SMOKE COLOR
+                </h4>
+            </div>
+            <div class="col-xs-8">
+                <div class="col-xs-4 cell insight-indicator">
+                    @if (Model.SmokeState == SmokeState.White)
+                {
+
+                        <img src="~/images/WhiteSmoke.png" id="whiteSmoke" class="enabled-state" />
+                    }
+                    else
+                    {
+                        <img src="~/images/WhiteSmoke.png" id="whiteSmoke" class="disabled-state" />
+
+                    }
+                </div>
+                <div class="col-xs-4 cell insight-indicator">
+                    @if (Model.SmokeState == SmokeState.Gray)
+                {
+                        <img src="~/images/GraySmoke.png" id="graySmoke" class="enabled-state" />
+                    }
+                    else
+                    {
+                        <img src="~/images/GraySmoke.png" id="graySmoke" class="disabled-state" />
+
+                    }
+                </div>
+                <div class="col-xs-4 cell insight-indicator">
+                    @if (Model.SmokeState == SmokeState.Dark)
+                {
+                        <img src="~/images/BlackSmoke.png" id="blackSmoke" class="enabled-state" />
+                    }
+                    else
+                    {
+                        <img src="~/images/BlackSmoke.png" id="blackSmoke" class="disabled-state" />
+
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-12">
+            <div class="col-xs-4  insight-label">
+                <h4>
+                    fire
+                </h4>
+            </div>
+            <div class="col-xs-8">
+                <div class="col-xs-4 cell insight-indicator">
+                    @if (Model.FireState == FireState.Small)
+                    {
+                        <img src="~/images/FireSmall.png" id="smallFire" class="enabled-state" />
+                    }
+                    else
+                    {
+                        <img src="~/images/FireSmall.png" id="smallFire" class="disabled-state" />
+
+                    }
+                </div>
+                <div class="col-xs-4 cell insight-indicator">
+                    @if (Model.FireState == FireState.Medium)
+                    {
+                        <img src="~/images/FireMedium.png" id="mediumFire" class="enabled-state" />
+                    }
+                    else
+                    {
+
+                        <img src="~/images/FireMedium.png" id="mediumFire" class="disabled-state" />
+                    }
+                </div>
+                <div class="col-xs-4 cell insight-indicator">
+                    @if (Model.FireState == FireState.Large)
+                    {
+                        <img src="~/images/FireLarge.png" id="largeFire" class="enabled-state" />
+                    }
+                    else
+                    {
+                        <img src="~/images/FireLarge.png" id="largeFire" class="disabled-state" />
+
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-12">
+            @if (!(Model.Location.Longitude == 0 && Model.Location.Latitude == 0))
+            {
+                <div class="col-xs-6 cell drone-label">
+                    Longitude
+                </div>
+                <div class="col-xs-6 cell drone-value">
+                    @Model.Location.Longitude
+                </div>
+
+                <div class="col-xs-6 cell drone-label">
+                    Latitude
+                </div>
+                <div class="col-xs-6 cell drone-value">
+                    @Model.Location.Latitude
+                </div>
+            }
+            @if (Model.Location.Temperature > 0)
+            {
+                <div class="col-xs-6 cell drone-label">
+                    Temperature
+                </div>
+                <div class="col-xs-6 cell drone-value">
+                    @Model.Location.Temperature &#8457;
+                </div>
+            }
+            @if (Model.Location.Humidity > 0)
+            {
+                <div class="col-xs-6 cell drone-label">
+                    Humidity
+                </div>
+                <div class="col-xs-6 cell drone-value">
+                    @Model.Location.Humidity %
+                </div>
+            }
+            @if (Model.Location.DewPoint > 0)
+            {
+                <div class="col-xs-6 cell drone-label">
+                    Dew Point
+                </div>
+                <div class="col-xs-6 cell drone-value">
+                    @Model.Location.DewPoint &#8457;
+                </div>
+            }
+            @if (Model.Location.WindSpeed > 0)
+            {
+                <div class="col-xs-6 cell drone-label">
+                    Wind Speed
+                </div>
+                <div class="col-xs-6 cell drone-value">
+                    @Model.Location.WindSpeed Km/h
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Location.WindDirection))
+            {
+                <div class="col-xs-6 cell drone-label">
+                    Wind Direction
+                </div>
+                <div class="col-xs-6 cell drone-value">
+                    @Model.Location.WindDirection
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Location.Summary))
+            {
+                <div class="col-xs-6 cell drone-label">
+                    Climate
+                </div>
+                <div class="col-xs-6 cell drone-value">
+                    @Model.Location.Summary
+                </div>
+            }
+            @if (Model.Location.AirQuality > 0)
+            {
+                var airQualityColor = (Model.Location.AirQuality > 300) ? "air-quality-hazardous" : 
+                    (Model.Location.AirQuality > 200 && Model.Location.AirQuality <= 300) ? "air-quality-very-unhealthy" : 
+                    (Model.Location.AirQuality > 150 && Model.Location.AirQuality <= 200) ? "air-quality-unhealthy" : 
+                    (Model.Location.AirQuality > 100 && Model.Location.AirQuality <= 150) ? "air-quality-sensitive" : 
+                    (Model.Location.AirQuality > 50 && Model.Location.AirQuality <= 100) ? "air-quality-moderate" : "air-quality-good";
+
+                <div class="col-xs-6 cell drone-label">
+                    Air Quality
+                </div>
+                <div class="col-xs-6 cell drone-value @airQualityColor">
+                    @Model.Location.AirQuality
+                </div>
+            }
+        </div>
+    </div>
+        <div class="col-xs-7" style="padding-left: 15px;">
+            @*<div class="col-xs-3  insight-label">
+                    <h3>
+                        insights
+                    </h3>
+                </div>*@
+            <div id="example" class="col-xs-12 cell" style="height: 220px;">
+            </div>
+
+        </div>
+        <script type='text/javascript'>
+    $(document).ready(function () {
+        var word_list = '@Html.Raw(Model.CloudTags)';
+        if (word_list != '') {
+            $("#example").jQCloud(JSON.parse(word_list), {
+                removeOverflowing: true
+            });
+        }
+    });
+        </script>
+}
