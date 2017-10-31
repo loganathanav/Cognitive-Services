@@ -75,4 +75,4 @@
 --Latitude=39.658745
 
 
-select * from [dbo].[ZetronTrnDroneLocations]  with(nolock)
+--select * from [dbo].[ZetronTrnDroneLocations]  with(nolock)

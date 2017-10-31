@@ -2,7 +2,16 @@
   <PropertyGroup>
     <TargetFramework>net461</TargetFramework>
   </PropertyGroup>
+  <ItemGroup>
+    <None Remove="config.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <ItemGroup>    
+    <PackageReference Include="EntityFramework" Version="6.2.0" />    
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="1.0.2" />    
     <PackageReference Include="windowsazure.mediaservices" Version="4.0.0.4" />
   </ItemGroup>
